@@ -1,0 +1,33 @@
+jobs:
+  - job: BuildJob
+    displayName: Building functionApp
+    variables:
+      basePath: "."
+      artifactPath: $(Build.ArtifactStagingDirectory)/function-app-$(Build.BuildId).zip
+    steps:
+      - task: UsePythonVersion@0
+        displayName: "Use Python 3.13"
+        inputs:
+          versionSpec: "3.13"
+          addToPath: true
+          architecture: "x64"
+      - bash: |
+          if [ -f extensions.csproj ]
+          then
+              dotnet build extensions.csproj --output ./bin
+          fi
+          pip install --target="./$(basePath)/.python_packages/lib/site-packages" -r $(Build.SourcesDirectory)/$(basePath)/requirements.txt
+      - task: ArchiveFiles@2
+        displayName: "Archive Files"
+        inputs:
+          rootFolderOrFile: "$(Build.SourcesDirectory)/$(basePath)"
+          includeRootFolder: false
+          archiveType: zip
+          archiveFile: $(artifactPath)
+          replaceExistingArchive: true
+      - task: PublishBuildArtifacts@1
+        displayName: "Publish Artifact"
+        inputs:
+          PathtoPublish: $(artifactPath)
+          ArtifactName: "drop"
+          publishLocation: "Container"
